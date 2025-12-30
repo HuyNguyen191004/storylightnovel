@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_view.dart';
+import 'addnovel_view.dart';
+import 'listnovel_view.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -106,8 +108,18 @@ class _ProfileViewState extends State<ProfileView> {
               // Xử lý xem thông tin người dùng
             }),
             _buildButton('Đăng truyện', () {
-              // Xử lý đăng truyện
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddNovelView()),
+              );
             }),
+            _buildButton('Danh sách truyện đã đăng', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ListNovelView()),
+              );
+            }),
+
             _buildButton('Đăng xuất', _logout),
           ],
         ),
