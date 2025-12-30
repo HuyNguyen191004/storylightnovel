@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'Views/login_view.dart';
+import 'Views/home_view.dart';
+import 'Views/profile_view.dart';
+import 'Views/search_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,9 +22,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LoginView(),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginView(),
+        '/home': (context) => const HomeView(),
+        '/profile': (context) => const ProfileView(),
+        '/search': (context) => const SearchView(),
+      },
     );
   }
 }

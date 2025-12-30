@@ -15,6 +15,7 @@ class AuthService {
 
     if (response.user != null) {
       print("Đăng ký thành công: ${response.user!.email}, username: $username");
+      print("Vui lòng kiểm tra email để xác nhận tài khoản!");
       return true;
     } else {
       print("Đăng ký thất bại");
@@ -30,8 +31,14 @@ class AuthService {
     );
 
     if (response.session != null) {
-      print("Đăng nhập thành công, user: ${response.user?.email}");
-      return true;
+      final user = response.user;
+      if (user?.emailConfirmedAt != null) {
+        print("Đăng nhập thành công, email đã xác nhận: ${user?.email}");
+        return true;
+      } else {
+        print("Email chưa xác nhận: ${user?.email}");
+        return false;
+      }
     } else {
       print("Đăng nhập thất bại");
       return false;

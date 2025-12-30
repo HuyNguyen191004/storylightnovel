@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../Services/auth_service.dart';
 import 'register_view.dart';
 import 'home_view.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -32,16 +33,23 @@ class _LoginViewState extends State<LoginView> {
     setState(() => _loading = true);
 
     try {
-      final bool success = await _authService.login(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
+      final response = await _authService.supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
 
-      if (success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeView()),
-        );
+      final user = response.user;
+      final session = response.session;
+
+      if (session != null && user != null) {
+        if (user.emailConfirmedAt != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeView()),
+          );
+        } else {
+          _showError("Email chưa xác nhận. Vui lòng kiểm tra hộp thư và nhấn vào liên kết xác nhận.");
+        }
       } else {
         _showError("Sai email hoặc mật khẩu");
       }
@@ -58,7 +66,6 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  // Hàm kiểm tra mật khẩu mạnh
   String? _validatePassword(String? val) {
     if (val == null || val.isEmpty) {
       return 'Vui lòng nhập mật khẩu';
