@@ -1,9 +1,10 @@
 // File: lib/Views/login_view.dart
 import 'package:flutter/material.dart';
-import '../Services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../Services/auth_service.dart'; // nếu bạn vẫn muốn giữ service riêng, có thể bỏ nếu không dùng
 import 'register_view.dart';
 import 'home_view.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -16,7 +17,8 @@ class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   bool _loading = false;
 
@@ -33,26 +35,28 @@ class _LoginViewState extends State<LoginView> {
     setState(() => _loading = true);
 
     try {
-      final response = await _authService.supabase.auth.signInWithPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      final user = response.user;
-      final session = response.session;
+      final user = userCredential.user;
 
-      if (session != null && user != null) {
-        if (user.emailConfirmedAt != null) {
+      if (user != null) {
+        if (user.emailVerified) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const HomeView()),
           );
         } else {
-          _showError("Email chưa xác nhận. Vui lòng kiểm tra hộp thư và nhấn vào liên kết xác nhận.");
+          _showError(
+              "Email chưa xác nhận. Vui lòng kiểm tra hộp thư và nhấn vào liên kết xác nhận.");
         }
       } else {
         _showError("Sai email hoặc mật khẩu");
       }
+    } on FirebaseAuthException catch (e) {
+      _showError("Có lỗi xảy ra: ${e.message}");
     } catch (e) {
       _showError("Có lỗi xảy ra: $e");
     } finally {
@@ -73,7 +77,8 @@ class _LoginViewState extends State<LoginView> {
     if (val.length < 6) {
       return 'Mật khẩu phải từ 6 ký tự';
     }
-    final regex = RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#\$&*~]).+$');
+    final regex =
+    RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#\$&*~]).+$');
     if (!regex.hasMatch(val)) {
       return 'Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt';
     }

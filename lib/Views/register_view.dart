@@ -1,6 +1,7 @@
 // File: lib/Views/register_view.dart
 import 'package:flutter/material.dart';
-import '../Services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -14,7 +15,9 @@ class _RegisterViewState extends State<RegisterView> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool _loading = false;
 
@@ -32,25 +35,37 @@ class _RegisterViewState extends State<RegisterView> {
     setState(() => _loading = true);
 
     try {
-      final success = await _authService.register(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-        _usernameController.text.trim(),
+      // Tạo tài khoản bằng Firebase Auth
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
 
-      if (success) {
+      final user = userCredential.user;
+
+      if (user != null) {
+        // Lưu thêm thông tin username vào Firestore
+        await _firestore.collection('users').doc(user.uid).set({
+          'username': _usernameController.text.trim(),
+          'email': user.email,
+          'created_at': FieldValue.serverTimestamp(),
+        });
+
+        // Gửi email xác minh
+        await user.sendEmailVerification();
+
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Đăng ký thành công! Hãy đăng nhập.'),
+              content: Text('Đăng ký thành công! Vui lòng xác nhận email và đăng nhập.'),
               backgroundColor: Colors.green,
             ),
           );
         }
-      } else {
-        _showError('Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.');
       }
+    } on FirebaseAuthException catch (e) {
+      _showError('Đăng ký thất bại: ${e.message}');
     } catch (e) {
       _showError('Có lỗi xảy ra: $e');
     } finally {
@@ -119,16 +134,13 @@ class _RegisterViewState extends State<RegisterView> {
                   if (val.length < 6) {
                     return 'Mật khẩu phải từ 6 ký tự';
                   }
-                  // Regex: ít nhất 1 chữ hoa, 1 chữ thường, 1 số, 1 ký tự đặc biệt
-                  final regex = RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#\$&*~]).+$');
-
+                  final regex = RegExp(
+                      r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#\$&*~]).+$');
                   if (!regex.hasMatch(val)) {
                     return 'Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt';
                   }
-
-                  return null; // hợp lệ
+                  return null;
                 },
-
               ),
               const SizedBox(height: 20),
               _loading

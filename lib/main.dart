@@ -1,5 +1,6 @@
+// File: lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'Views/login_view.dart';
 import 'Views/home_view.dart';
@@ -9,10 +10,8 @@ import 'Views/search_view.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: 'https://ycylywwjjigrjkgxrcan.supabase.co',
-    anonKey: 'sb_publishable_RuZiY-Sdeo6s2xA_REhkGw_ylGRCcyM',
-  );
+  // Khởi tạo Firebase
+  await Firebase.initializeApp();
 
   runApp(const MyApp());
 }

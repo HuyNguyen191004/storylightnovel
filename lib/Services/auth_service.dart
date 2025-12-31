@@ -1,53 +1,57 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
-  final supabase = Supabase.instance.client;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Đăng ký tài khoản mới với email, password và username
+  /// Đăng ký tài khoản mới với email và password
   Future<bool> register(String email, String password, String username) async {
-    final response = await supabase.auth.signUp(
-      email: email,
-      password: password,
-      data: {
-        'username': username, // lưu username vào user_metadata
-      },
-    );
+    try {
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    if (response.user != null) {
-      print("Đăng ký thành công: ${response.user!.email}, username: $username");
-      print("Vui lòng kiểm tra email để xác nhận tài khoản!");
+      // Cập nhật thêm displayName (username)
+      await userCredential.user?.updateDisplayName(username);
+
+      print("Đăng ký thành công: ${userCredential.user?.email}, username: $username");
+      print("Firebase sẽ tự động gửi email xác nhận nếu bạn bật Email Verification.");
+
+      // Gửi email xác nhận
+      await userCredential.user?.sendEmailVerification();
+
       return true;
-    } else {
-      print("Đăng ký thất bại");
+    } catch (e) {
+      print("Đăng ký thất bại: $e");
       return false;
     }
   }
 
   /// Đăng nhập với email và password
   Future<bool> login(String email, String password) async {
-    final response = await supabase.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    try {
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    if (response.session != null) {
-      final user = response.user;
-      if (user?.emailConfirmedAt != null) {
-        print("Đăng nhập thành công, email đã xác nhận: ${user?.email}");
+      User? user = userCredential.user;
+      if (user != null && user.emailVerified) {
+        print("Đăng nhập thành công, email đã xác nhận: ${user.email}");
         return true;
       } else {
         print("Email chưa xác nhận: ${user?.email}");
         return false;
       }
-    } else {
-      print("Đăng nhập thất bại");
+    } catch (e) {
+      print("Đăng nhập thất bại: $e");
       return false;
     }
   }
 
   /// Đăng xuất
   Future<void> logout() async {
-    await supabase.auth.signOut();
+    await _auth.signOut();
     print("Đã đăng xuất");
   }
 }
