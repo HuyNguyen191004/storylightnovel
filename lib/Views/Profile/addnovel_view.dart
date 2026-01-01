@@ -4,9 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloudinary_public/cloudinary_public.dart'; // Thư viện Cloudinary mới
-import '../models/genre.dart';
-import '../services/genre_service.dart';
-import 'home_view.dart';
+import '../../models/genre.dart';
+import '../../services/genre_service.dart';
+import '../Home/home_view.dart';
 
 class AddNovelView extends StatefulWidget {
   const AddNovelView({super.key});

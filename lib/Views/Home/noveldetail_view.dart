@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'reading_view.dart';
+import '../Profile/reading_view.dart';
 
 class NovelDetailView extends StatelessWidget {
   final String novelId;
@@ -60,16 +60,11 @@ class NovelDetailView extends StatelessWidget {
                             style: TextStyle(fontSize: 15, color: Colors.grey[800])),
                         const SizedBox(height: 12),
 
-                        // HIỂN THỊ THỂ LOẠI BẰNG CÁCH TRA CỨU TỪ GENRE_IDS
                         StreamBuilder<QuerySnapshot>(
                           stream: FirebaseFirestore.instance.collection('genres').snapshots(),
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) return const SizedBox();
-
-                            // Lấy danh sách ID từ truyện
                             List<dynamic> genreIds = novelData['genre_ids'] ?? [];
-
-                            // Lọc lấy các tên thể loại tương ứng với ID
                             List<String> genreNames = snapshot.data!.docs
                                 .where((doc) => genreIds.contains(doc.id))
                                 .map((doc) => (doc.data() as Map<String, dynamic>)['name'].toString())
@@ -156,34 +151,46 @@ class NovelDetailView extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator(color: Colors.orange));
                 }
 
-                final chapters = snapshot.data?.docs ?? [];
-                if (chapters.isEmpty) {
+                final docs = snapshot.data?.docs ?? [];
+                if (docs.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.all(20.0),
                     child: Center(child: Text("Truyện hiện chưa có chương nào.")),
                   );
                 }
 
+                List<Map<String, String>> allChapters = docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return {
+                    "title": "Chương ${data['chapter_number'] ?? ''}: ${data['title'] ?? ''}",
+                    "content": data['content']?.toString() ?? '',
+                  };
+                }).toList();
+
                 return ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: chapters.length,
+                  itemCount: allChapters.length,
                   separatorBuilder: (context, index) => const Divider(height: 1),
                   itemBuilder: (context, index) {
-                    final chap = chapters[index].data() as Map<String, dynamic>;
+                    final chap = allChapters[index];
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                      leading: Text("${chap['chapter_number'] ?? index + 1}.",
+                      leading: Text("${index + 1}.",
                           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-                      title: Text(chap['title'] ?? 'Chương không tên'),
+                      title: Text(chap['title'] ?? ''),
                       trailing: const Icon(Icons.keyboard_arrow_right, size: 20),
                       onTap: () {
+                        // FIX LỖI: Truyền đầy đủ thông tin để ReadingView có thể lưu vào History
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ReadingView(
-                              title: "Chương ${chap['chapter_number'] ?? index + 1}: ${chap['title'] ?? ''}",
-                              content: chap['content'] ?? '',
+                              chapters: allChapters,
+                              initialIndex: index,
+                              novelId: novelId,
+                              novelTitle: novelData['title'] ?? 'Truyện không tên',
+                              coverUrl: novelData['cover_url'] ?? '',
                             ),
                           ),
                         );

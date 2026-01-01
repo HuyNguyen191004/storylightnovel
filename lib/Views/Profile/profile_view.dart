@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Thay thế SharedPreferences bằng Firebase Auth
-import 'login_view.dart';
-import 'addnovel_view.dart'; // Đảm bảo file này dùng Cloudinary như đã sửa
+import 'package:firebase_auth/firebase_auth.dart';
+import '../Auth/login_view.dart';
+import 'addnovel_view.dart';
 import 'listnovel_view.dart';
+import 'user_information_view.dart';
+import 'history_view.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -15,10 +17,18 @@ class _ProfileViewState extends State<ProfileView> {
   int _selectedIndex = 2;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Lấy email người dùng hiện tại từ Firebase
-  String get _userEmail => _auth.currentUser?.email ?? "Người dùng";
+  // LOGIC HIỂN THỊ: Ưu tiên Biệt danh (DisplayName), nếu trống thì dùng Email
+  String get _displayIdentity {
+    final user = _auth.currentUser;
+    if (user?.displayName != null && user!.displayName!.isNotEmpty) {
+      return user.displayName!;
+    }
+    return user?.email ?? "Người dùng";
+  }
 
-  // Hàm Logout sử dụng Firebase
+  // Lấy URL ảnh đại diện từ Firebase
+  String? get _avatarUrl => _auth.currentUser?.photoURL;
+
   Future<void> _logout() async {
     try {
       await _auth.signOut();
@@ -38,7 +48,6 @@ class _ProfileViewState extends State<ProfileView> {
     if (index == _selectedIndex) return;
     setState(() => _selectedIndex = index);
 
-    // Chuyển trang theo Navigation chuẩn
     if (index == 0) {
       Navigator.pushReplacementNamed(context, '/search');
     } else if (index == 1) {
@@ -81,7 +90,7 @@ class _ProfileViewState extends State<ProfileView> {
           backgroundColor: Colors.grey[200],
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          alignment: Alignment.centerLeft, // Căn lề trái cho đẹp
+          alignment: Alignment.centerLeft,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: onPressed,
@@ -92,12 +101,11 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar đồng bộ và KHÔNG CÓ nút quay lại
       appBar: AppBar(
         backgroundColor: Colors.orange,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: false, // Bỏ nút quay lại
+        automaticallyImplyLeading: false,
         title: const Text(
           'Trang cá nhân',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -106,27 +114,49 @@ class _ProfileViewState extends State<ProfileView> {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
-      // Dùng SingleChildScrollView để tránh lỗi vạch vàng khi xoay màn hình
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
               const SizedBox(height: 10),
-              const CircleAvatar(
-                radius: 40,
+
+              // --- CẬP NHẬT: HIỂN THỊ ẢNH ĐẠI DIỆN ---
+              CircleAvatar(
+                radius: 50,
                 backgroundColor: Colors.orange,
-                child: Icon(Icons.person, size: 50, color: Colors.white),
+                backgroundImage: (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                    ? NetworkImage(_avatarUrl!)
+                    : null,
+                child: (_avatarUrl == null || _avatarUrl!.isEmpty)
+                    ? const Icon(Icons.person, size: 60, color: Colors.white)
+                    : null,
               ),
+
               const SizedBox(height: 12),
+
+              // --- CẬP NHẬT: HIỂN THỊ BIỆT DANH HOẶC EMAIL ---
               Text(
-                _userEmail,
+                _displayIdentity,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
+
               const SizedBox(height: 30),
 
               _buildButton('Thông tin người dùng', Icons.info_outline, () {
-                // Xử lý thông tin
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UserInformationView()),
+                ).then((_) {
+                  // CẬP NHẬT LẠI TRANG KHI QUAY VỀ
+                  setState(() {});
+                });
+              }),
+              _buildButton('Lịch sử đã đọc', Icons.history, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HistoryView()),
+                );
               }),
               _buildButton('Đăng truyện', Icons.add_circle_outline, () {
                 Navigator.push(

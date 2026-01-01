@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-import 'Views/login_view.dart';
-import 'Views/home_view.dart';
-import 'Views/profile_view.dart';
-import 'Views/search_view.dart';
+import 'Views/Auth/login_view.dart';
+import 'Views/Home/home_view.dart';
+import 'Views/Profile/profile_view.dart';
+import 'Views/Seach/search_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

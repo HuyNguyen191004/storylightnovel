@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:storylightnovel/Views/search_view.dart';
+import 'package:storylightnovel/Views/Seach/search_view.dart';
 import 'noveldetail_view.dart'; // Đảm bảo đã import trang chi tiết
-import 'profile_view.dart';
+import '../Profile/profile_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
