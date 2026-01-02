@@ -176,12 +176,12 @@ class NovelDetailView extends StatelessWidget {
                     final chap = allChapters[index];
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                      leading: Text("${index + 1}.",
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                      // XÓA DÒNG leading DƯỚI ĐÂY:
+                      // leading: Text("${index + 1}.", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+
                       title: Text(chap['title'] ?? ''),
                       trailing: const Icon(Icons.keyboard_arrow_right, size: 20),
                       onTap: () {
-                        // FIX LỖI: Truyền đầy đủ thông tin để ReadingView có thể lưu vào History
                         Navigator.push(
                           context,
                           MaterialPageRoute(

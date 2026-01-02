@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Đảm bảo import đúng file chứa AddChapterView
 import 'addchapter_view.dart';
 
 class ListNovelView extends StatefulWidget {
@@ -15,7 +14,6 @@ class _ListNovelViewState extends State<ListNovelView> {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FirebaseAuth auth = FirebaseAuth.instance;
 
-  // --- HÀM XÓA TRUYỆN ---
   Future<void> _deleteNovel(String novelId) async {
     bool confirm = await showDialog(
       context: context,
@@ -109,7 +107,6 @@ class _ListNovelViewState extends State<ListNovelView> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: ListTile(
-                  // SỰ KIỆN NHẤN VÀO TRUYỆN ĐỂ THÊM CHƯƠNG
                   onTap: () {
                     Navigator.push(
                       context,
@@ -142,7 +139,35 @@ class _ListNovelViewState extends State<ListNovelView> {
                     novel['title'] ?? 'Không tiêu đề',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  subtitle: Text(novel['author'] ?? 'Ẩn danh'),
+                  // --- PHẦN SỐ CHƯƠNG ĐÃ ĐƯỢC THÊM TẠI ĐÂY ---
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(novel['author'] ?? 'Ẩn danh', style: const TextStyle(fontSize: 13)),
+                      const SizedBox(height: 4),
+                      StreamBuilder<QuerySnapshot>(
+                        stream: firestore
+                            .collection('novels')
+                            .doc(novelId)
+                            .collection('chapters')
+                            .snapshots(),
+                        builder: (context, chapterSnap) {
+                          if (chapterSnap.hasData) {
+                            int count = chapterSnap.data!.docs.length;
+                            return Text(
+                              "Số chương: $count",
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          }
+                          return const Text("...", style: TextStyle(fontSize: 12));
+                        },
+                      ),
+                    ],
+                  ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                     onPressed: () => _deleteNovel(novelId),

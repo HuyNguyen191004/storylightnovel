@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloudinary_public/cloudinary_public.dart'; // Thư viện Cloudinary mới
+import 'package:cloudinary_public/cloudinary_public.dart';
 import '../../models/genre.dart';
 import '../../services/genre_service.dart';
 import '../Home/home_view.dart';
@@ -31,8 +31,6 @@ class _AddNovelViewState extends State<AddNovelView> {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final ImagePicker _picker = ImagePicker();
 
-  // --- CẤU HÌNH CLOUDINARY ---
-  // Thay 'YOUR_CLOUD_NAME' và 'YOUR_UPLOAD_PRESET' bằng thông tin của bạn
   final cloudinary = CloudinaryPublic(
     'dzytgqs3e',
     'StoryLightNovel',
@@ -67,7 +65,6 @@ class _AddNovelViewState extends State<AddNovelView> {
     }
   }
 
-  // --- HÀM UPLOAD LÊN CLOUDINARY THAY CHO FIREBASE STORAGE ---
   Future<String?> _uploadToCloudinary() async {
     if (_selectedImage == null) return null;
     try {
@@ -78,7 +75,7 @@ class _AddNovelViewState extends State<AddNovelView> {
           resourceType: CloudinaryResourceType.Image,
         ),
       );
-      return response.secureUrl; // Trả về link ảnh https
+      return response.secureUrl;
     } catch (e) {
       debugPrint("Lỗi Cloudinary: $e");
       return null;
@@ -120,14 +117,12 @@ class _AddNovelViewState extends State<AddNovelView> {
     setState(() => _isSaving = true);
 
     try {
-      // 1. Upload ảnh lên Cloudinary
       String? coverUrl = await _uploadToCloudinary();
 
       if (coverUrl == null) {
-        throw Exception("Không thể tải ảnh lên Cloudinary. Vui lòng kiểm tra lại cấu hình.");
+        throw Exception("Không thể tải ảnh lên Cloudinary.");
       }
 
-      // 2. Lưu thông tin Novel vào Firestore
       final docRef = await firestore.collection('novels').add({
         'title': _titleController.text.trim(),
         'author': _authorController.text.trim(),
@@ -138,7 +133,6 @@ class _AddNovelViewState extends State<AddNovelView> {
         'created_at': FieldValue.serverTimestamp(),
       });
 
-      // 3. Lưu bảng phụ novel_genres
       WriteBatch batch = firestore.batch();
       for (var g in _selectedGenres) {
         var ref = firestore.collection('novel_genres').doc();
@@ -171,6 +165,9 @@ class _AddNovelViewState extends State<AddNovelView> {
         title: const Text("Thêm thể loại mới"),
         content: TextField(
           controller: controller,
+          // Bật hỗ trợ gõ văn bản thông thường
+          keyboardType: TextInputType.text,
+          textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(hintText: "Ví dụ: Tiên Hiệp"),
           autofocus: true,
         ),
@@ -201,7 +198,7 @@ class _AddNovelViewState extends State<AddNovelView> {
           children: [
             CircularProgressIndicator(color: Colors.orange),
             SizedBox(height: 15),
-            Text("Đang tải ảnh lên Cloudinary và lưu dữ liệu...",
+            Text("Đang tải ảnh và lưu dữ liệu...",
                 style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
@@ -213,6 +210,7 @@ class _AddNovelViewState extends State<AddNovelView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ... Phần chọn ảnh giữ nguyên ...
               Center(
                 child: Column(
                   children: [
@@ -249,23 +247,37 @@ class _AddNovelViewState extends State<AddNovelView> {
                 ),
               ),
               const SizedBox(height: 25),
+
+              // CẬP NHẬT CÁC TEXT FORM FIELD ĐỂ GÕ TIẾNG VIỆT
               TextFormField(
                 controller: _titleController,
+                keyboardType: TextInputType.text,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(labelText: "Tên truyện *", border: OutlineInputBorder()),
                 validator: (v) => v!.isEmpty ? "Vui lòng nhập tên truyện" : null,
               ),
               const SizedBox(height: 15),
               TextFormField(
                 controller: _authorController,
+                keyboardType: TextInputType.text,
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: "Tác giả", border: OutlineInputBorder()),
               ),
               const SizedBox(height: 15),
               TextFormField(
                 controller: _descriptionController,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: "Mô tả nội dung", border: OutlineInputBorder()),
+                maxLines: 5,
+                keyboardType: TextInputType.multiline, // Hỗ trợ gõ nhiều dòng
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                    labelText: "Mô tả nội dung",
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true
+                ),
               ),
+
               const SizedBox(height: 20),
+              // ... Phần thể loại giữ nguyên ...
               const Text("Thể loại truyện:", style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Row(

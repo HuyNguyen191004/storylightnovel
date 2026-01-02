@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../Home/noveldetail_view.dart';
 
 class SearchView extends StatefulWidget {
   const SearchView({super.key});
@@ -8,112 +10,129 @@ class SearchView extends StatefulWidget {
 }
 
 class _SearchViewState extends State<SearchView> {
-  int _selectedIndex = 0;
   final TextEditingController _searchController = TextEditingController();
-  List<String> _results = [];
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
-    setState(() => _selectedIndex = index);
+  // Danh sách lưu kết quả tìm kiếm thực tế từ Firestore
+  List<DocumentSnapshot> _searchResults = [];
+  bool _isSearching = false;
 
-    if (index == 1) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else if (index == 2) {
-      Navigator.pushReplacementNamed(context, '/profile');
-    }
-  }
-
-  Widget _buildNavIcon(int index, IconData iconData) {
-    final isSelected = _selectedIndex == index;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      height: isSelected ? 70 : 50,
-      width: isSelected ? 70 : 50,
-      decoration: BoxDecoration(
-        color: Colors.orange,
-        shape: BoxShape.circle,
-        boxShadow: isSelected
-            ? [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))]
-            : [],
-      ),
-      child: IconButton(
-        icon: Icon(
-          iconData,
-          size: 30,
-          color: isSelected ? Colors.white : Colors.black,
-        ),
-        onPressed: () => _onItemTapped(index),
-      ),
-    );
-  }
-
-  void _performSearch() {
+  // --- HÀM TÌM KIẾM THỰC TẾ TỪ FIRESTORE ---
+  void _performSearch() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
-    // Tạm thời tạo kết quả giả lập
     setState(() {
-      _results = List.generate(
-        5,
-            (i) => "Kết quả ${i + 1} cho \"$query\"",
-      );
+      _isSearching = true;
     });
+
+    try {
+      // Tìm kiếm theo tiêu đề (Lưu ý: Firestore tìm kiếm query khá hạn chế,
+      // đây là cách tìm kiếm gần đúng cơ bản)
+      final snapshot = await _firestore
+          .collection('novels')
+          .where('title', isGreaterThanOrEqualTo: query)
+          .where('title', isLessThanOrEqualTo: '$query\uf8ff')
+          .get();
+
+      setState(() {
+        _searchResults = snapshot.docs;
+        _isSearching = false;
+      });
+    } catch (e) {
+      debugPrint("Lỗi tìm kiếm: $e");
+      setState(() => _isSearching = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(60),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.orange,
-            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-          ),
-          child: const SafeArea(
-            child: Center(
-              child: Text(
-                'Tìm kiếm',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+      // AppBar đồng bộ với Home và Profile
+      appBar: AppBar(
+        title: const Text('Tìm kiếm truyện',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: Colors.orange,
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Thanh tìm kiếm
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Nhập từ khóa...',
+                hintText: 'Nhập tên truyện cần tìm...',
+                prefixIcon: const Icon(Icons.search, color: Colors.orange),
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: _performSearch,
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchResults = []);
+                  },
                 ),
+                filled: true,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide(color: Colors.orange.withOpacity(0.3)),
                 ),
               ),
               onSubmitted: (_) => _performSearch(),
             ),
             const SizedBox(height: 20),
+
+            // Kết quả tìm kiếm
             Expanded(
-              child: _results.isEmpty
-                  ? const Center(child: Text('Chưa có kết quả'))
+              child: _isSearching
+                  ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+                  : _searchResults.isEmpty
+                  ? const Center(
+                  child: Text('Nhập tên truyện để tìm kiếm',
+                      style: TextStyle(color: Colors.grey)))
                   : ListView.builder(
-                itemCount: _results.length,
+                itemCount: _searchResults.length,
                 itemBuilder: (context, index) {
+                  final data = _searchResults[index].data() as Map<String, dynamic>;
                   return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: ListTile(
-                      leading: const Icon(Icons.book),
-                      title: Text(_results[index]),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          data['cover_url'] ?? '',
+                          width: 50,
+                          height: 70,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.book, size: 40),
+                        ),
+                      ),
+                      title: Text(data['title'] ?? 'Không tiêu đề',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text("Tác giả: ${data['author'] ?? 'Ẩn danh'}"),
+                      onTap: () {
+                        // Chuyển sang chi tiết truyện
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NovelDetailView(
+                              novelId: _searchResults[index].id,
+                              novelData: data,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
@@ -122,17 +141,7 @@ class _SearchViewState extends State<SearchView> {
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavIcon(0, Icons.search),
-            _buildNavIcon(1, Icons.home),
-            _buildNavIcon(2, Icons.person),
-          ],
-        ),
-      ),
+      // ĐÃ XÓA bottomNavigationBar TẠI ĐÂY
     );
   }
 }

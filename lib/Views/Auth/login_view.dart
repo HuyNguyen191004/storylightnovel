@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:storylightnovel/Views/main_screen.dart';
 import '../Auth/register_view.dart';
 import '../Home/home_view.dart';
 
@@ -97,7 +98,7 @@ class _LoginViewState extends State<LoginView> {
         if (user.emailVerified) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const HomeView()),
+            MaterialPageRoute(builder: (_) => const MainScreen()),
           );
         } else {
           _showError("Email chưa xác nhận. Vui lòng kiểm tra hộp thư.");

@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   firebase_core: ^3.10.1
   firebase_auth: ^5.5.1
   cloud_firestore: ^5.6.3
@@ -37,6 +39,8 @@ dependencies:
   firebase_database: ^11.3.10
   cloudinary_public: ^0.23.1
   image_picker: ^1.0.7
+  url_launcher: ^6.3.0
+  google_fonts: ^6.1.0
 
 
 

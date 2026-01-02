@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:storylightnovel/Views/Seach/search_view.dart';
-import 'noveldetail_view.dart'; // Đảm bảo đã import trang chi tiết
-import '../Profile/profile_view.dart';
+import 'noveldetail_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -13,50 +11,16 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  int _selectedIndex = 1;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FirebaseAuth auth = FirebaseAuth.instance;
-
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
-    setState(() => _selectedIndex = index);
-
-    if (index == 0) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SearchView()));
-    } else if (index == 2) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfileView()));
-    }
-  }
-
-  Widget _buildNavIcon(int index, IconData iconData) {
-    final isSelected = _selectedIndex == index;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      height: isSelected ? 65 : 50,
-      width: isSelected ? 65 : 50,
-      decoration: BoxDecoration(
-        color: Colors.orange,
-        shape: BoxShape.circle,
-        boxShadow: isSelected
-            ? [const BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))]
-            : [],
-      ),
-      child: IconButton(
-        icon: Icon(
-          iconData,
-          size: 28,
-          color: isSelected ? Colors.white : Colors.black87,
-        ),
-        onPressed: () => _onItemTapped(index),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Giữ AppBar để hiển thị tiêu đề trang Home
       appBar: AppBar(
-        title: const Text('Light Novel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text('Light Novel',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.orange,
         elevation: 0,
         centerTitle: true,
@@ -85,15 +49,14 @@ class _HomeViewState extends State<HomeView> {
                 final data = doc.data() as Map<String, dynamic>;
                 final String coverUrl = data['cover_url']?.toString() ?? "";
 
-                // Dùng InkWell để xử lý sự kiện nhấn vào toàn bộ Card
                 return Card(
                   elevation: 3,
                   margin: const EdgeInsets.only(bottom: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  clipBehavior: Clip.antiAlias, // Giúp hiệu ứng InkWell không bị tràn góc bo
+                  clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     onTap: () {
-                      // Chuyển sang trang chi tiết NovelDetailView
+                      // Navigator này sẽ đẩy trang Detail đè lên cả MainScreen (ẩn menu đọc cho thoáng)
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -160,21 +123,7 @@ class _HomeViewState extends State<HomeView> {
           },
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.only(bottom: 20, top: 10),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavIcon(0, Icons.search),
-            _buildNavIcon(1, Icons.home),
-            _buildNavIcon(2, Icons.person),
-          ],
-        ),
-      ),
+      // ĐÃ XÓA bottomNavigationBar TẠI ĐÂY
     );
   }
 
@@ -182,13 +131,10 @@ class _HomeViewState extends State<HomeView> {
     if (url.isEmpty || !url.startsWith('http')) {
       return const Icon(Icons.image_not_supported, color: Colors.grey, size: 40);
     }
-
     return Image.network(
       url,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return const Icon(Icons.broken_image, color: Colors.grey, size: 40);
-      },
+      errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.grey, size: 40),
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return const Center(child: CircularProgressIndicator(strokeWidth: 2));
