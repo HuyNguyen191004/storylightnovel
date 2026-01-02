@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "435217600026",
+    "project_id": "storylightnovel",
+    "storage_bucket": "storylightnovel.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:435217600026:android:864278fffe8032fbec4ba3",
+        "android_client_info": {
+          "package_name": "com.example.storylightnovel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqb5Po9qnBai_dBnAMnzDGIRGwu6-rnoU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

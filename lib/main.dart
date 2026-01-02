@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'Views/login_view.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:storylightnovel/Views/main_screen.dart';
+import 'Views/Auth/login_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: 'https://ycylywwjjigrjkgxrcan.supabase.co',
-    anonKey: 'sb_publishable_RuZiY-Sdeo6s2xA_REhkGw_ylGRCcyM',
-  );
-
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -19,9 +15,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LoginView(),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('vi', 'VN'),
+        Locale('en', 'US'),
+      ],
+      locale: const Locale('vi', 'VN'),
+
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginView(),
+        // Đây là Route duy nhất chứa thanh BottomBar dính cứng
+        '/main': (context) => const MainScreen(),
+      },
     );
   }
 }
