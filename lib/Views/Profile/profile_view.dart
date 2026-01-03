@@ -99,7 +99,6 @@ class _ProfileViewState extends State<ProfileView> {
     } catch (e) { debugPrint(e.toString()); }
   }
 
-  // --- ADMIN LOGIC (Quản lý yêu cầu & Người dùng) ---
   void _showAdminManagement() {
     showModalBottomSheet(
       context: context,
@@ -114,7 +113,7 @@ class _ProfileViewState extends State<ProfileView> {
           children: [
             Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
             const SizedBox(height: 15),
-            const Text("Yêu cầu đang chờ duyệt", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text("Yêu cầu chờ duyệt", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -185,7 +184,7 @@ class _ProfileViewState extends State<ProfileView> {
                       if (val == 'delete') _firestore.collection('users').doc(docs[index].id).delete();
                     },
                     itemBuilder: (context) => [
-                      if (data['role'] == 'author') const PopupMenuItem(value: 'demote', child: Text("Hạ quyền Độc giả")),
+                      if (data['role'] == 'author') const PopupMenuItem(value: 'demote', child: Text("Gỡ quyền Tác giả")),
                       const PopupMenuItem(value: 'delete', child: Text("Xóa tài khoản", style: TextStyle(color: Colors.red))),
                     ],
                   ),
@@ -200,7 +199,10 @@ class _ProfileViewState extends State<ProfileView> {
 
   @override
   Widget build(BuildContext context) {
-    bool isAdmin = _auth.currentUser?.email == adminEmail;
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return const Scaffold(body: Center(child: Text("Lỗi xác thực")));
+
+    bool isAdmin = currentUser.email == adminEmail;
 
     return Scaffold(
       appBar: AppBar(
@@ -212,15 +214,20 @@ class _ProfileViewState extends State<ProfileView> {
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(bottom: Radius.circular(20))),
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
+        stream: _firestore.collection('users').doc(currentUser.uid).snapshots(),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.orange));
+          }
+
           String roleValue = "reader";
           String roleDisplay = "Độc giả";
+
           if (snapshot.hasData && snapshot.data!.exists) {
             final data = snapshot.data!.data() as Map<String, dynamic>?;
             roleValue = data?['role'] ?? "reader";
-            if (roleValue == 'author') roleDisplay = "Tác giả";
             if (isAdmin) roleDisplay = "Admin";
+            else if (roleValue == 'author') roleDisplay = "Tác giả";
           }
 
           return SingleChildScrollView(
@@ -237,29 +244,39 @@ class _ProfileViewState extends State<ProfileView> {
                   ),
                   const SizedBox(height: 12),
                   Text(_displayIdentity, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Chip(label: Text(roleDisplay, style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))),
+                  Chip(
+                      backgroundColor: Colors.orange.withOpacity(0.1),
+                      label: Text(roleDisplay, style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))
+                  ),
                   const SizedBox(height: 20),
 
+                  // --- PHẦN NÀY CHỈ DÀNH CHO ADMIN ---
                   if (isAdmin) ...[
-                    _buildButton('Yêu cầu Duyệt', Icons.admin_panel_settings, _showAdminManagement, textColor: Colors.blue),
+                    _buildButton('Duyệt quyền Tác giả', Icons.admin_panel_settings, _showAdminManagement, textColor: Colors.blue),
                     _buildButton('Quản lý người dùng', Icons.people_alt, _showUserManagement, textColor: Colors.indigo),
                   ],
 
-                  _buildButton('Thông tin người dùng', Icons.info_outline, () {
+                  // --- PHẦN CHUNG (CẢ ADMIN VÀ USER ĐỀU THẤY) ---
+                  _buildButton('Thông tin cá nhân', Icons.info_outline, () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const UserInformationView()));
                   }),
 
-                  _buildButton('Lịch sử đã đọc', Icons.history, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryView()));
-                  }),
-
-                  if (!isAdmin)
-                    _buildButton('Đăng truyện', Icons.add_circle_outline, _handlePostNovel),
-
-                  if (roleValue == 'author' || isAdmin)
-                    _buildButton('Danh sách truyện đã đăng', Icons.list_alt, () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ListNovelView()));
+                  // --- PHẦN NÀY CHỈ DÀNH CHO USER (ĐỘC GIẢ/TÁC GIẢ), ADMIN KHÔNG THẤY ---
+                  if (!isAdmin) ...[
+                    _buildButton('Lịch sử đã đọc', Icons.history, () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryView()));
                     }),
+
+                    if (roleValue != 'author')
+                      _buildButton('Gửi yêu cầu Đăng truyện', Icons.add_circle_outline, _handlePostNovel),
+
+                    if (roleValue == 'author') ...[
+                      _buildButton('Đăng truyện mới', Icons.edit_note, _handlePostNovel, textColor: Colors.green),
+                      _buildButton('Danh sách truyện đã đăng', Icons.list_alt, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const ListNovelView()));
+                      }),
+                    ],
+                  ],
 
                   const SizedBox(height: 20),
                   _buildButton('Đăng xuất', Icons.logout, _logout, textColor: Colors.red),
@@ -269,7 +286,6 @@ class _ProfileViewState extends State<ProfileView> {
           );
         },
       ),
-      // ĐÃ XÓA bottomNavigationBar TẠI ĐÂY - MainScreen sẽ quản lý
     );
   }
 
@@ -277,13 +293,14 @@ class _ProfileViewState extends State<ProfileView> {
     return Container(
       width: double.infinity, margin: const EdgeInsets.symmetric(vertical: 6),
       child: ElevatedButton.icon(
-        icon: Icon(icon, color: textColor ?? Colors.black87),
-        label: Text(text, style: TextStyle(fontSize: 16, color: textColor ?? Colors.black87)),
+        icon: Icon(icon, color: textColor ?? Colors.black87, size: 22),
+        label: Text(text, style: TextStyle(fontSize: 15, color: textColor ?? Colors.black87)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.grey[200], elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          backgroundColor: Colors.grey[100],
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
           alignment: Alignment.centerLeft,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         ),
         onPressed: onPressed,
       ),
@@ -293,7 +310,6 @@ class _ProfileViewState extends State<ProfileView> {
   Future<void> _logout() async {
     await _auth.signOut();
     if (mounted) {
-      // Dùng pushNamedAndRemoveUntil để xóa hoàn toàn MainScreen và quay về Login
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }

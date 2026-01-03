@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
@@ -71,7 +72,7 @@ class _UserInformationViewState extends State<UserInformationView> {
   Future<void> _changePassword() async {
     if (_newPasswordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Mật khẩu mới phải ít nhất 6 ký tự")),
+        const SnackBar(content: Text("Mật khẩu mới phải ít nhất 6 ký tự, có chữ hoa, có số và có ký tự đặc biệt")),
       );
       return;
     }
@@ -109,10 +110,25 @@ class _UserInformationViewState extends State<UserInformationView> {
   Future<void> _updateDisplayName() async {
     setState(() => _isLoading = true);
     try {
-      await _auth.currentUser?.updateDisplayName(_nameController.text);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Đã cập nhật biệt danh!")),
-      );
+      final user = _auth.currentUser;
+      if (user != null) {
+        // 1. Cập nhật vào Firebase Auth (để hiện trên Header app)
+        await user.updateDisplayName(_nameController.text);
+
+        // 2. GHI VÀO FIRESTORE (để hiện trong phần Thảo luận/Bình luận)
+        await FirebaseFirestore.instance
+            .collection('user_information') // Phải khớp với tên collection bạn dùng để lấy
+            .doc(user.uid)
+            .set({
+          'nickname': _nameController.text.trim(),
+          'email': user.email,
+          'last_update': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true)); // Dùng merge để không làm mất ảnh đại diện nếu có
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Đã cập nhật biệt danh!")),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
     } finally {
