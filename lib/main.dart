@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:storylightnovel/Views/main_screen.dart';
-import 'Views/Auth/login_view.dart';
+import 'package:storylightnovel/Views/Auth/login_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,11 +27,9 @@ class MyApp extends StatelessWidget {
         Locale('en', 'US'),
       ],
       locale: const Locale('vi', 'VN'),
-
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginView(),
-        // Đây là Route duy nhất chứa thanh BottomBar dính cứng
         '/main': (context) => const MainScreen(),
       },
     );
