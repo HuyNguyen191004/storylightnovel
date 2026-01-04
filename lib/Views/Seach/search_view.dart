@@ -21,28 +21,48 @@ class _SearchViewState extends State<SearchView> {
   List<Genre> _selectedGenres = [];
   bool _showGenres = false;
 
-  // --- TÌM KIẾM THEO TÊN ---
+  // Hàm chuẩn hóa tiếng Việt: chuyển về chữ thường và loại bỏ dấu
+  String _removeDiacritics(String str) {
+    var withDia = 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ';
+    var withoutDia = 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyydD';
+    for (int i = 0; i < withDia.length; i++) {
+      str = str.replaceAll(withDia[i], withoutDia[i]);
+    }
+    return str.toLowerCase();
+  }
+
+  // --- TÌM KIẾM THEO TÊN (Hỗ trợ không dấu, một phần tên) ---
   void _performSearch() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
     setState(() {
       _isSearching = true;
-      _selectedGenres = [];
+      _selectedGenres = []; // Xóa lọc thể loại khi tìm theo tên
     });
 
     try {
-      final snapshot = await _firestore
-          .collection('novels')
-          .where('title', isGreaterThanOrEqualTo: query)
-          .where('title', isLessThanOrEqualTo: '$query\uf8ff')
-          .get();
+      // Vì Firestore không hỗ trợ tìm kiếm không dấu/một phần hiệu quả, 
+      // ta sẽ lấy danh sách truyện về và lọc ở client.
+      // Lưu ý: Với số lượng truyện cực lớn, nên dùng giải pháp như Algolia.
+      final snapshot = await _firestore.collection('novels').get();
+      
+      final normalizedQuery = _removeDiacritics(query);
+
+      final filteredDocs = snapshot.docs.where((doc) {
+        final title = doc.data()['title']?.toString() ?? '';
+        final normalizedTitle = _removeDiacritics(title);
+        
+        // Kiểm tra xem tiêu đề có chứa chuỗi tìm kiếm không (không phân biệt dấu)
+        return normalizedTitle.contains(normalizedQuery);
+      }).toList();
 
       setState(() {
-        _searchResults = snapshot.docs;
+        _searchResults = filteredDocs;
         _isSearching = false;
       });
     } catch (e) {
+      debugPrint("Lỗi tìm kiếm: $e");
       setState(() => _isSearching = false);
     }
   }
@@ -59,8 +79,6 @@ class _SearchViewState extends State<SearchView> {
     });
 
     try {
-      // Tìm các novel_id chứa TẤT CẢ các thể loại đã chọn
-      // Cách làm: Lấy danh sách novel cho từng thể loại, sau đó tìm phần giao
       List<Set<String>> novelIdsPerGenre = [];
 
       for (var genre in _selectedGenres) {
@@ -80,7 +98,6 @@ class _SearchViewState extends State<SearchView> {
         return;
       }
 
-      // Tìm phần giao (truyện phải có ĐỦ các thể loại được chọn)
       Set<String> intersectionIds = novelIdsPerGenre.first;
       for (var i = 1; i < novelIdsPerGenre.length; i++) {
         intersectionIds = intersectionIds.intersection(novelIdsPerGenre[i]);
@@ -94,7 +111,6 @@ class _SearchViewState extends State<SearchView> {
       List<String> finalIds = intersectionIds.toList();
       List<DocumentSnapshot> finalResults = [];
 
-      // Truy vấn chi tiết (giới hạn 10 id mỗi lần truy vấn Firestore)
       for (var i = 0; i < finalIds.length; i += 10) {
         var chunk = finalIds.sublist(i, i + 10 > finalIds.length ? finalIds.length : i + 10);
         final novelSnapshot = await _firestore
@@ -157,7 +173,7 @@ class _SearchViewState extends State<SearchView> {
                                       _selectedGenres.removeWhere((g) => g.id == genre.id);
                                     }
                                   });
-                                  setState(() {}); // Cập nhật UI bên ngoài
+                                  setState(() {});
                                 },
                               );
                             }).toList(),
@@ -210,7 +226,6 @@ class _SearchViewState extends State<SearchView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thanh tìm kiếm và nút nâng cao
             Row(
               children: [
                 Expanded(
@@ -295,7 +310,9 @@ class _SearchViewState extends State<SearchView> {
                     Text(
                       _selectedGenres.isNotEmpty
                           ? 'Không tìm thấy truyện nào thỏa mãn tất cả các thể loại đã chọn'
-                          : 'Hãy nhập tên truyện hoặc dùng Tìm kiếm nâng cao',
+                          : (_searchController.text.isNotEmpty 
+                              ? 'Không tìm thấy truyện nào khớp với từ khóa' 
+                              : 'Hãy nhập tên truyện hoặc dùng Tìm kiếm nâng cao'),
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.grey),
                     ),
