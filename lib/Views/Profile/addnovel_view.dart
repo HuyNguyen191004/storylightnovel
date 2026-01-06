@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import '../../models/genre.dart';
 import '../../services/genre_service.dart';
-import '../Home/home_view.dart';
 
 class AddNovelView extends StatefulWidget {
   const AddNovelView({super.key});
@@ -83,8 +82,30 @@ class _AddNovelViewState extends State<AddNovelView> {
   }
 
   Future<void> _addGenre(String name) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) return;
+
+    final existingGenre = _genres.firstWhere(
+          (g) => g.name.toLowerCase() == trimmedName.toLowerCase(),
+      orElse: () => Genre(id: '', name: ''),
+    );
+
+    if (existingGenre.id.isNotEmpty) {
+      if (!_selectedGenres.any((g) => g.id == existingGenre.id)) {
+        setState(() => _selectedGenres.add(existingGenre));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Thể loại '$trimmedName' đã tồn tại và đã được chọn.")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Thể loại '$trimmedName' đã được chọn rồi.")),
+        );
+      }
+      return;
+    }
+
     try {
-      final newGenre = await _genreService.addGenre(name);
+      final newGenre = await _genreService.addGenre(trimmedName);
       await _loadGenres();
       setState(() {
         if (!_selectedGenres.any((g) => g.id == newGenre.id)) {
@@ -93,6 +114,9 @@ class _AddNovelViewState extends State<AddNovelView> {
       });
     } catch (e) {
       debugPrint("Lỗi thêm thể loại: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi khi thêm thể loại: $e")),
+      );
     }
   }
 
@@ -144,9 +168,11 @@ class _AddNovelViewState extends State<AddNovelView> {
       await batch.commit();
 
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeView()),
+        // Thay vì pushReplacement sang HomeView (làm mất BottomBar),
+        // chúng ta pop về màn hình trước đó.
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Đăng truyện thành công!")),
         );
       }
     } catch (e) {
@@ -165,7 +191,6 @@ class _AddNovelViewState extends State<AddNovelView> {
         title: const Text("Thêm thể loại mới"),
         content: TextField(
           controller: controller,
-          // Bật hỗ trợ gõ văn bản thông thường
           keyboardType: TextInputType.text,
           textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(hintText: "Ví dụ: Tiên Hiệp"),
@@ -175,7 +200,7 @@ class _AddNovelViewState extends State<AddNovelView> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Hủy")),
           ElevatedButton(
             onPressed: () async {
-              if (controller.text.isNotEmpty) {
+              if (controller.text.trim().isNotEmpty) {
                 Navigator.pop(ctx);
                 await _addGenre(controller.text.trim());
               }
@@ -210,7 +235,6 @@ class _AddNovelViewState extends State<AddNovelView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ... Phần chọn ảnh giữ nguyên ...
               Center(
                 child: Column(
                   children: [
@@ -248,7 +272,6 @@ class _AddNovelViewState extends State<AddNovelView> {
               ),
               const SizedBox(height: 25),
 
-              // CẬP NHẬT CÁC TEXT FORM FIELD ĐỂ GÕ TIẾNG VIỆT
               TextFormField(
                 controller: _titleController,
                 keyboardType: TextInputType.text,
@@ -267,7 +290,7 @@ class _AddNovelViewState extends State<AddNovelView> {
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 5,
-                keyboardType: TextInputType.multiline, // Hỗ trợ gõ nhiều dòng
+                keyboardType: TextInputType.multiline,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
                     labelText: "Mô tả nội dung",
@@ -277,7 +300,6 @@ class _AddNovelViewState extends State<AddNovelView> {
               ),
 
               const SizedBox(height: 20),
-              // ... Phần thể loại giữ nguyên ...
               const Text("Thể loại truyện:", style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Row(
